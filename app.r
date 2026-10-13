@@ -1,0 +1,481 @@
+library(shiny)
+library(bslib)
+library(lpSolve)
+
+# --- ИНТЕРФЕЙС САЙТА (UI) ---
+ui <- page_navbar(
+  title = "R-Решатель (30 задач)",
+  theme = bs_theme(version = 5, bootswatch = "flatly"),
+  
+  # ================= ВКЛАДКА 1: ГЛАВНАЯ =================
+  nav_panel(
+    title = "🏠 Главная",
+    div(
+      style = "text-align: center; padding: 30px;",
+      h1("Добро пожаловать в интерактивный решатель задач на языке R!"),
+      p("Выберите нужный блок задач в верхнем меню. В каждом разделе доступно 10 интерактивных калькуляторов с кодом.", 
+        style = "font-size: 18px; color: #555;"),
+      
+      # Векторное изображение мультяшного кота (SVG)
+      HTML('
+      <div style="margin: 20px auto; width: 260px;">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- Уши -->
+          <polygon points="35,95 25,25 85,55" fill="#FF9800" stroke="#333" stroke-width="4" stroke-linejoin="round"/>
+          <polygon points="42,80 35,38 75,58" fill="#FFCDD2"/>
+          <polygon points="165,95 175,25 115,55" fill="#FF9800" stroke="#333" stroke-width="4" stroke-linejoin="round"/>
+          <polygon points="158,80 165,38 125,58" fill="#FFCDD2"/>
+          <!-- Голова -->
+          <circle cx="100" cy="115" r="65" fill="#FF9800" stroke="#333" stroke-width="4"/>
+          <!-- Полоски на лбу -->
+          <path d="M 100 55 L 100 75 M 85 58 L 90 73 M 115 58 L 110 73" stroke="#E65100" stroke-width="5" stroke-linecap="round"/>
+          <!-- Глаза -->
+          <circle cx="75" cy="105" r="12" fill="#FFF" stroke="#333" stroke-width="3"/>
+          <circle cx="77" cy="105" r="6" fill="#333"/>
+          <circle cx="74" cy="102" r="2.5" fill="#FFF"/>
+          <circle cx="125" cy="105" r="12" fill="#FFF" stroke="#333" stroke-width="3"/>
+          <circle cx="123" cy="105" r="6" fill="#333"/>
+          <circle cx="120" cy="102" r="2.5" fill="#FFF"/>
+          <!-- Нос и рот -->
+          <polygon points="93,122 107,122 100,130" fill="#F06292" stroke="#333" stroke-width="2"/>
+          <path d="M 100 130 Q 90 142 80 132" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 100 130 Q 110 142 120 132" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <!-- Усы -->
+          <line x1="20" y1="115" x2="60" y2="122" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <line x1="15" y1="130" x2="60" y2="130" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <line x1="180" y1="115" x2="140" y2="122" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <line x1="185" y1="130" x2="140" y2="130" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+          <!-- Очки ученого кота -->
+          <circle cx="75" cy="105" r="18" fill="none" stroke="#2C3E50" stroke-width="3"/>
+          <circle cx="125" cy="105" r="18" fill="none" stroke="#2C3E50" stroke-width="3"/>
+          <line x1="93" y1="105" x2="107" y2="105" stroke="#2C3E50" stroke-width="3"/>
+        </svg>
+      </div>
+      '),
+      h4("Кот-ученый готов решать ваши задачи!"),
+      hr(),
+      fluidRow(
+        column(4, wellPanel(h5("💰 Финансы и Оптимизация"), p("ABC/XYZ анализ, вклады, кредиты, NPV, транспортная задача, симплекс-метод, EOQ."))),
+        column(4, wellPanel(h5("📈 Производные"), p("Символьное дифференцирование, скорость, экстремумы, эластичность, градиент, ряд Тейлора."))),
+        column(4, wellPanel(h5("📊 Статистика"), p("Описательная статистика, t-тест, ANOVA, регрессия, Хи-квадрат, распределения.")))
+      )
+    )
+  ),
+  
+  # ================= ВКЛАДКА 2: ФИНАНСОВЫЕ ЗАДАЧИ =================
+  nav_panel(
+    title = "💰 Финансовые задачи (10)",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 350,
+        h5("Выбор задачи"),
+        selectInput("fin_task", "Выберите задачу из списка:", choices = c(
+          "1. ABC-анализ ассортимента" = "f1",
+          "2. XYZ-анализ стабильности продаж" = "f2",
+          "3. Сложный процент по вкладу" = "f3",
+          "4. Аннуитетный кредит" = "f4",
+          "5. Дифференцированный кредит" = "f5",
+          "6. Оценка инвестиций (NPV и IRR)" = "f6",
+          "7. Транспортная задача (Оптимизация)" = "f7",
+          "8. Оптимизация выпуска (ЛП)" = "f8",
+          "9. Оптимизация портфеля (Риск/Доход)" = "f9",
+          "10. Оптимальный размер заказа (EOQ)" = "f10"
+        )),
+        hr(),
+        numericInput("fin_param", "Настроечный коэффициент (множитель данных):", value = 1, min = 0.1, max = 10, step = 0.1),
+        p("Изменяйте коэффициент, чтобы пересчитать задачу с новыми входными данными.", style = "font-size: 13px; color: gray;")
+      ),
+      card(
+        card_header(textOutput("fin_title")),
+        h5("Условие и решение на языке R:"),
+        verbatimTextOutput("fin_output"),
+        plotOutput("fin_plot", height = "300px")
+      )
+    )
+  ),
+  
+  # ================= ВКЛАДКА 3: ЗАДАЧИ НА ПРОИЗВОДНУЮ =================
+  nav_panel(
+    title = "📈 Производные (10)",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 350,
+        h5("Выбор задачи"),
+        selectInput("der_task", "Выберите задачу из списка:", choices = c(
+          "1. Производная полинома в точке" = "d1",
+          "2. Производная сложной функции" = "d2",
+          "3. Уравнение касательной к графику" = "d3",
+          "4. Поиск экстремумов (Min / Max)" = "d4",
+          "5. Физика: Скорость и ускорение" = "d5",
+          "6. Экономика: Предельные издержки (MC)" = "d6",
+          "7. Эластичность спроса по цене" = "d7",
+          "8. Частные производные (2 переменные)" = "d8",
+          "9. Градиент функции в точке" = "d9",
+          "10. Аппроксимация рядом Тейлора" = "d10"
+        )),
+        hr(),
+        numericInput("der_x", "Значение точки X для расчета:", value = 2, step = 0.5)
+      ),
+      card(
+        card_header(textOutput("der_title")),
+        h5("Математический расчет в R (пакет stats::D и численные методы):"),
+        verbatimTextOutput("der_output"),
+        plotOutput("der_plot", height = "300px")
+      )
+    )
+  ),
+  
+  # ================= ВКЛАДКА 4: ЗАДАЧИ НА СТАТИСТИКУ =================
+  nav_panel(
+    title = "📊 Статистика (10)",
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 350,
+        h5("Выбор задачи"),
+        selectInput("stat_task", "Выберите задачу из списка:", choices = c(
+          "1. Описательная статистика выборки" = "s1",
+          "2. Доверительный интервал для среднего" = "s2",
+          "3. Двухвыборочный t-тест Стьюдента" = "s3",
+          "4. Критерий Хи-квадрат (Таблица сопряженности)" = "s4",
+          "5. Однофакторный дисперсионный анализ (ANOVA)" = "s5",
+          "6. Корреляция Пирсона и Спирмена" = "s6",
+          "7. Парная линейная регрессия (OLS)" = "s7",
+          "8. Проверка на нормальность (Шапиро-Уилк)" = "s8",
+          "9. Вероятности нормального распределения" = "s9",
+          "10. Биномиальное распределение (Схема Бернулли)" = "s10"
+        )),
+        hr(),
+        numericInput("stat_seed", "Зерно генератора случайных чисел (Seed):", value = 42, min = 1, max = 9999, step = 1),
+        p("Меняйте Seed, чтобы сгенерировать новую случайную выборку для задачи.", style = "font-size: 13px; color: gray;")
+      ),
+      card(
+        card_header(textOutput("stat_title")),
+        h5("Статистический вывод R:"),
+        verbatimTextOutput("stat_output"),
+        plotOutput("stat_plot", height = "300px")
+      )
+    )
+  )
+)
+
+# --- СЕРВЕРНАЯ ЛОГИКА (РЕШЕНИЕ 30 ЗАДАЧ) ---
+server <- function(input, output, session) {
+  
+  # =========================================================================
+  # БЛОК 1: РЕШЕНИЕ 10 ФИНАНСОВЫХ ЗАДАЧ
+  # =========================================================================
+  output$fin_title <- renderText({ paste("Финансовый блок — Задача", toupper(input$fin_task)) })
+  
+  output$fin_output <- renderPrint({
+    k <- input$fin_param
+    switch(input$fin_task,
+      "f1" = {
+        cat("ЗАДАЧА 1: Провести ABC-анализ 6 товаров по выручке.\n\n")
+        df <- data.frame(
+          Товар = paste0("Товар_", 1:6),
+          Выручка = c(500, 300, 120, 40, 25, 15) * k
+        )
+        df <- df[order(-df$Выручка), ]
+        df$Доля_проц <- round(df$Выручка / sum(df$Выручка) * 100, 2)
+        df$Накоп_доля <- cumsum(df$Доля_проц)
+        df$Группа <- ifelse(df$Накоп_доля <= 80, "A", ifelse(df$Накоп_доля <= 95, "B", "C"))
+        print(df, row.names = FALSE)
+      },
+      "f2" = {
+        cat("ЗАДАЧА 2: Провести XYZ-анализ стабильности спроса по 4 кварталам.\n\n")
+        sales <- matrix(c(100,105,98,102,  50,80,40,70,  10,90,5,120) * k, nrow = 3, byrow = TRUE)
+        cv <- apply(sales, 1, function(x) sd(x) / mean(x) * 100)
+        grp <- ifelse(cv <= 10, "X (Стабильный)", ifelse(cv <= 25, "Y (Колеблющийся)", "Z (Случайный)"))
+        res <- data.frame(Товар = c("Хлеб", "Куртки", "Сувениры"), Ср_Продажи = rowMeans(sales), Коэф_Вариации_проц = round(cv, 2), Группа_XYZ = grp)
+        print(res)
+      },
+      "f3" = {
+        cat("ЗАДАЧА 3: Расчет вклада со сложным процентом и ежемесячной капитализацией.\n\n")
+        P <- 100000 * k; r <- 0.12; years <- 3; m <- 12
+        S <- P * (1 + r / m)^(years * m)
+        cat(sprintf("Начальная сумма: %.2f руб.\nСтавка: %.1f%% годовых, Срок: %d года\nИтоговая сумма: %.2f руб.\nЧистый доход: %.2f руб.\n", P, r*100, years, S, S - P))
+      },
+      "f4" = {
+        cat("ЗАДАЧА 4: Расчет аннуитетного кредита (равные платежи).\n\n")
+        S <- 500000 * k; r_m <- 0.15 / 12; n <- 12
+        pmt <- S * (r_m * (1 + r_m)^n) / ((1 + r_m)^n - 1)
+        cat(sprintf("Сумма кредита: %.2f руб. на 12 мес. под 15%% годовых.\nЕжемесячный платеж: %.2f руб.\nОбщая переплата: %.2f руб.\n", S, pmt, pmt * n - S))
+      },
+      "f5" = {
+        cat("ЗАДАЧА 5: График погашения дифференцированного кредита (6 мес).\n\n")
+        S <- 300000 * k; r_m <- 0.14 / 12; n <- 6
+        main_pay <- S / n
+        rem <- S - (0:(n-1)) * main_pay
+        interest <- rem * r_m
+        df <- data.frame(Месяц = 1:n, Осн_долг = round(main_pay, 2), Проценты = round(interest, 2), Платеж = round(main_pay + interest, 2))
+        print(df, row.names = FALSE)
+      },
+      "f6" = {
+        cat("ЗАДАЧА 6: Оценка инвестиционного проекта (NPV и внутренняя норма доходности IRR).\n\n")
+        cf <- c(-1000, 350, 450, 550) * k
+        r <- 0.10
+        npv <- sum(cf / (1 + r)^(0:(length(cf)-1)))
+        irr_func <- function(rate) sum(cf / (1 + rate)^(0:(length(cf)-1)))
+        irr <- uniroot(irr_func, c(0, 1))$root
+        cat("Денежные потоки (CF0..CF3):", cf, "\n")
+        cat(sprintf("При ставке дисконтирования 10%%:\nNPV (Чистая приведенная стоимость) = %.2f\nIRR (Внутренняя норма доходности) = %.2f%%\n", npv, irr * 100))
+      },
+      "f7" = {
+        cat("ЗАДАЧА 7: Транспортная задача (минимизация затрат на доставку с 2 складов в 3 магазина).\n\n")
+        costs <- matrix(c(4, 6, 8, 5, 3, 7) * k, nrow = 2, byrow = TRUE)
+        row.signs <- rep("<=", 2); row.rhs <- c(100, 150) # Запасы на складах
+        col.signs <- rep("=", 3); col.rhs <- c(80, 90, 80) # Потребности магазинов
+        sol <- lp.transport(costs, "min", row.signs, row.rhs, col.signs, col.rhs)
+        cat("Матрица тарифов:\n"); print(costs)
+        cat("\nОптимальный план перевозок (шт.):\n"); print(sol$solution)
+        cat("\nМинимальные общие затраты:", sol$objval, "руб.\n")
+      },
+      "f8" = {
+        cat("ЗАДАЧА 8: Оптимизация производства (Линейное программирование).\nМаксимизация прибыли от выпуска столов (X1) и стульев (X2).\n\n")
+        f.obj <- c(500, 300) * k # Прибыль на 1 шт.
+        f.con <- matrix(c(4, 2,  2, 3), nrow = 2, byrow = TRUE) # Расход дерева и времени
+        f.dir <- c("<=", "<=")
+        f.rhs <- c(60, 48) # Запасы ресурсов
+        sol <- lp("max", f.obj, f.con, f.dir, f.rhs)
+        cat(sprintf("Оптимальный выпуск: Столы = %.1f шт., Стулья = %.1f шт.\nМаксимальная прибыль: %.2f руб.\n", sol$solution[1], sol$solution[2], sol$objval))
+      },
+      "f9" = {
+        cat("ЗАДАЧА 9: Ожидаемая доходность и риск портфеля из 2 акций.\n\n")
+        w <- c(0.6, 0.4) # Веса акций
+        ret <- c(0.15, 0.25) * k # Доходности
+        sd_vec <- c(0.10, 0.22) # Риск (СКО)
+        cor_xy <- 0.2 # Корреляция
+        port_ret <- sum(w * ret)
+        port_var <- (w[1]*sd_vec[1])^2 + (w[2]*sd_vec[2])^2 + 2*w[1]*w[2]*sd_vec[1]*sd_vec[2]*cor_xy
+        cat(sprintf("Веса портфеля: 60%% и 40%%\nОжидаемая доходность портфеля: %.2f%%\nРиск портфеля (Стандартное отклонение): %.2f%%\n", port_ret*100, sqrt(port_var)*100))
+      },
+      "f10" = {
+        cat("ЗАДАЧА 10: Модель Уилсона (EOQ) — оптимальный размер заказа запасов.\n\n")
+        D <- 12000 * k # Годовой спрос
+        S <- 500 # Стоимость подачи одного заказа
+        H <- 30 # Стоимость хранения единицы товара в год
+        EOQ <- sqrt((2 * D * S) / H)
+        orders_per_year <- D / EOQ
+        cat(sprintf("Годовой спрос: %.0f шт., Затраты на заказ: %d руб., Хранение: %d руб.\nОптимальный размер партии (EOQ): %.1f шт.\nОптимальное число заказов в год: %.1f раз.\n", D, S, H, EOQ, orders_per_year))
+      }
+    )
+  })
+  
+  output$fin_plot <- renderPlot({
+    k <- input$fin_param
+    if (input$fin_task == "f1") {
+      vals <- c(500, 300, 120, 40, 25, 15) * k
+      barplot(vals, names.arg = paste0("Т", 1:6), col = c("forestgreen","forestgreen","gold","tomato","tomato","tomato"), main = "ABC-анализ: Выручка по товарам", ylab = "Выручка")
+    } else if (input$fin_task == "f6") {
+      rates <- seq(0, 0.4, by = 0.01)
+      cf <- c(-1000, 350, 450, 550) * k
+      npvs <- sapply(rates, function(r) sum(cf / (1 + r)^(0:3)))
+      plot(rates*100, npvs, type = "l", lwd = 3, col = "blue", main = "Профиль NPV (Поиск IRR)", xlab = "Ставка дисконтирования (%)", ylab = "NPV")
+      abline(h = 0, col = "red", lty = 2)
+    } else {
+      x <- 1:10
+      plot(x, x * k * 100, type = "b", pch = 19, col = "#2C3E50", main = "Динамика финансового показателя", xlab = "Период", ylab = "Значение")
+      grid()
+    }
+  })
+
+  # =========================================================================
+  # БЛОК 2: РЕШЕНИЕ 10 ЗАДАЧ НА ПРОИЗВОДНУЮ
+  # =========================================================================
+  output$der_title <- renderText({ paste("Блок Производных — Задача", toupper(input$der_task)) })
+  
+  output$der_output <- renderPrint({
+    x_val <- input$der_x
+    switch(input$der_task,
+      "d1" = {
+        cat("ЗАДАЧА 1: Найти производную полинома f(x) = 3*x^4 - 5*x^2 + 7*x - 2.\n\n")
+        expr <- expression(3 * x^4 - 5 * x^2 + 7 * x - 2)
+        d_expr <- D(expr, "x")
+        val <- eval(d_expr, list(x = x_val))
+        cat("Символьная производная f'(x) в R:\n"); print(d_expr)
+        cat(sprintf("\nЗначение производной f'(%.2f) = %.4f\n", x_val, val))
+      },
+      "d2" = {
+        cat("ЗАДАЧА 2: Производная сложной функции f(x) = exp(0.5*x) * sin(x).\n\n")
+        expr <- expression(exp(0.5 * x) * sin(x))
+        d_expr <- D(expr, "x")
+        val <- eval(d_expr, list(x = x_val))
+        cat("Аналитический вид f'(x):\n"); print(d_expr)
+        cat(sprintf("\nЗначение f'(%.2f) = %.4f\n", x_val, val))
+      },
+      "d3" = {
+        cat("ЗАДАЧА 3: Составить уравнение касательной к графику f(x) = x^2 - 2*x + 3 в точке X0.\n\n")
+        f <- function(x) x^2 - 2*x + 3
+        df <- function(x) 2*x - 2
+        y0 <- f(x_val); k_slope <- df(x_val)
+        intercept <- y0 - k_slope * x_val
+        cat(sprintf("Точка касания X0 = %.2f, Y0 = %.2f\nУгловой коэффициент k = f'(X0) = %.2f\nУравнение касательной: y = %.2f * x + (%.2f)\n", x_val, y0, k_slope, k_slope, intercept))
+      },
+      "d4" = {
+        cat("ЗАДАЧА 4: Найти экстремум (минимум и максимум) функции f(x) = x^3 - 6*x^2 + 9*x + 1 на отрезке [0, 4].\n\n")
+        f <- function(x) x^3 - 6*x^2 + 9*x + 1
+        opt_min <- optimize(f, interval = c(0, 4), maximum = FALSE)
+        opt_max <- optimize(f, interval = c(0, 4), maximum = TRUE)
+        cat("Первая производная: f'(x) = 3*x^2 - 12*x + 9 = 0 => критические точки x = 1 и x = 3.\n")
+        cat(sprintf("Локальный максимум: X = %.2f, f(X) = %.2f\nЛокальный минимум: X = %.2f, f(X) = %.2f\n", opt_max$maximum, opt_max$objective, opt_min$minimum, opt_min$objective))
+      },
+      "d5" = {
+        cat("ЗАДАЧА 5: Механический смысл производной. Закон движения S(t) = 2*t^3 - 4*t^2 + 10*t.\nНайти скорость v(t) и ускорение a(t) в момент времени t = X.\n\n")
+        s_expr <- expression(2 * t^3 - 4 * t^2 + 10 * t)
+        v_expr <- D(s_expr, "t")
+        a_expr <- D(v_expr, "t")
+        cat("Скорость v(t) = S'(t):", deparse(v_expr), "\n")
+        cat("Ускорение a(t) = S''(t):", deparse(a_expr), "\n")
+        cat(sprintf("\nВ момент t = %.2f сек:\nСкорость = %.2f м/с, Ускорение = %.2f м/с^2\n", x_val, eval(v_expr, list(t=x_val)), eval(a_expr, list(t=x_val))))
+      },
+      "d6" = {
+        cat("ЗАДАЧА 6: Экономический смысл: Функция общих издержек TC(Q) = 0.5*Q^2 + 15*Q + 200.\nНайти предельные издержки MC(Q) = TC'(Q) при объеме выпуска Q = X.\n\n")
+        tc_expr <- expression(0.5 * Q^2 + 15 * Q + 200)
+        mc_expr <- D(tc_expr, "Q")
+        q <- abs(x_val) * 10
+        cat("Функция предельных издержек MC(Q):", deparse(mc_expr), "\n")
+        cat(sprintf("При объеме Q = %.1f шт., производство дополнительной единицы стоит MC = %.2f руб.\n", q, eval(mc_expr, list(Q = q))))
+      },
+      "d7" = {
+        cat("ЗАДАЧА 7: Коэффициент ценовой эластичности спроса. Функция спроса Q(P) = 500 - 15*P - 0.5*P^2.\n\n")
+        p <- max(1, abs(x_val) * 5)
+        q_expr <- expression(500 - 15 * P - 0.5 * P^2)
+        dq_expr <- D(q_expr, "P")
+        Q_val <- eval(q_expr, list(P = p))
+        dQ_val <- eval(dq_expr, list(P = p))
+        E <- dQ_val * (p / Q_val)
+        cat(sprintf("При цене P = %.1f:\nОбъем спроса Q = %.1f\nПроизводная Q'(P) = %.2f\nКоэффициент эластичности E = %.3f\n", p, Q_val, dQ_val, E))
+      },
+      "d8" = {
+        cat("ЗАДАЧА 8: Частные производные функции двух переменных z(x, y) = x^2 * y + 3 * y^3 - 4*x.\n\n")
+        z_expr <- expression(x^2 * y + 3 * y^3 - 4 * x)
+        dz_dx <- D(z_expr, "x")
+        dz_dy <- D(z_expr, "y")
+        cat("Частная производная по X (dz/dx):"); print(dz_dx)
+        cat("Частная производная по Y (dz/dy):"); print(dz_dy)
+        cat(sprintf("В точке (x = %.1f, y = 2):\ndz/dx = %.2f, dz/dy = %.2f\n", x_val, eval(dz_dx, list(x=x_val, y=2)), eval(dz_dy, list(x=x_val, y=2))))
+      },
+      "d9" = {
+        cat("ЗАДАЧА 9: Вектор градиента функции f(x, y) = sin(x) + cos(y) + x*y в точке (X, 1).\n\n")
+        f_expr <- expression(sin(x) + cos(y) + x * y)
+        gx <- eval(D(f_expr, "x"), list(x = x_val, y = 1))
+        gy <- eval(D(f_expr, "y"), list(x = x_val, y = 1))
+        norm_g <- sqrt(gx^2 + gy^2)
+        cat(sprintf("Градиент grad(f) = [ %.4f ; %.4f ]\nМодуль градиента (скорость наибыстрейшего роста) = %.4f\n", gx, gy, norm_g))
+      },
+      "d10" = {
+        cat("ЗАДАЧА 10: Разложение функции f(x) = exp(x) в ряд Тейлора 3-го порядка около нуля.\nФормула: T(x) = f(0) + f'(0)*x + f''(0)*x^2/2! + f'''(0)*x^3/3!\n\n")
+        exact <- exp(x_val)
+        taylor_3 <- 1 + x_val + (x_val^2)/2 + (x_val^3)/6
+        cat(sprintf("Точка X = %.2f\nТочное значение exp(X) = %.5f\nАппроксимация Тейлора 3-го порядка = %.5f\nАбсолютная погрешность = %.5f\n", x_val, exact, taylor_3, abs(exact - taylor_3)))
+      }
+    )
+  })
+  
+  output$der_plot <- renderPlot({
+    x0 <- input$der_x
+    curve(x^2 - 2*x + 3, from = x0 - 4, to = x0 + 4, lwd = 3, col = "#2980B9", main = "График функции и касательной в выбранной точке X", xlab = "X", ylab = "f(X)")
+    y0 <- x0^2 - 2*x0 + 3
+    k <- 2*x0 - 2
+    abline(a = y0 - k*x0, b = k, col = "#E74C3C", lwd = 2, lty = 2)
+    points(x0, y0, pch = 19, cex = 1.8, col = "#E74C3C")
+    legend("topleft", legend = c("Функция f(x)", "Касательная y = f(x0) + f'(x0)(x-x0)"), col = c("#2980B9", "#E74C3C"), lwd = 2, lty = c(1, 2))
+    grid()
+  })
+
+  # =========================================================================
+  # БЛОК 3: РЕШЕНИЕ 10 ЗАДАЧ НА СТАТИСТИКУ
+  # =========================================================================
+  output$stat_title <- renderText({ paste("Статистический блок — Задача", toupper(input$stat_task)) })
+  
+  output$stat_output <- renderPrint({
+    set.seed(input$stat_seed)
+    switch(input$stat_task,
+      "s1" = {
+        cat("ЗАДАЧА 1: Расчет базовых описательных статистик выборки (N = 50).\n\n")
+        x <- round(rnorm(50, mean = 100, sd = 15), 1)
+        cat("Первые 10 элементов выборки:", head(x, 10), "...\n\n")
+        cat(sprintf("Среднее: %.2f\nМедиана: %.2f\nДисперсия: %.2f\nСтандартное отклонение (SD): %.2f\nМежквартильный размах (IQR): %.2f\n", mean(x), median(x), var(x), sd(x), IQR(x)))
+      },
+      "s2" = {
+        cat("ЗАДАЧА 2: Построение 95% доверительного интервала для математического ожидания.\n\n")
+        x <- rnorm(30, mean = 50, sd = 8)
+        res <- t.test(x, conf.level = 0.95)
+        cat(sprintf("Выборочное среднее: %.2f\n95%% Доверительный интервал: [ %.2f ; %.2f ]\n", mean(x), res$conf.int[1], res$conf.int[2]))
+      },
+      "s3" = {
+        cat("ЗАДАЧА 3: Сравнение двух независимых групп с помощью t-критерия Стьюдента.\n\n")
+        g1 <- rnorm(25, mean = 70, sd = 10)
+        g2 <- rnorm(25, mean = 78, sd = 10)
+        print(t.test(g1, g2))
+      },
+      "s4" = {
+        cat("ЗАДАЧА 4: Критерий согласия и независимости Хи-квадрат Пирсона.\nТаблица сопряженности (Предпочтения клиентов по 2 городам):\n\n")
+        mat <- matrix(sample(20:80, 4), nrow = 2, dimnames = list(Город = c("Москва", "СПб"), Тариф = c("Базовый", "Премиум")))
+        print(mat)
+        print(chisq.test(mat))
+      },
+      "s5" = {
+        cat("ЗАДАЧА 5: Однофакторный дисперсионный анализ (ANOVA) для 3 групп.\n\n")
+        df <- data.frame(
+          Урожайность = c(rnorm(15, 40, 5), rnorm(15, 48, 5), rnorm(15, 42, 5)),
+          Удобрение = factor(rep(c("Тип_A", "Тип_B", "Тип_C"), each = 15))
+        )
+        fit <- aov(Урожайность ~ Удобрение, data = df)
+        print(summary(fit))
+      },
+      "s6" = {
+        cat("ЗАДАЧА 6: Анализ тесноты связи: Коэффициенты корреляции Пирсона и Спирмена.\n\n")
+        x <- rnorm(40, 10, 2)
+        y <- 2.5 * x + rnorm(40, 0, 3)
+        cat(sprintf("Линейная корреляция Пирсона r = %.4f (p-value = %.4g)\n", cor(x, y, method = "pearson"), cor.test(x, y)$p.value))
+        cat(sprintf("Ранговая корреляция Спирмена rho = %.4f\n", cor(x, y, method = "spearman")))
+      },
+      "s7" = {
+        cat("ЗАДАЧА 7: Построение парной линейной регрессии Y = b0 + b1 * X методом МНК.\n\n")
+        x <- 1:30
+        y <- 12 + 3.2 * x + rnorm(30, 0, 8)
+        model <- lm(y ~ x)
+        print(summary(model)$coefficients)
+        cat(sprintf("\nКоэффициент детерминации R^2 = %.4f\n", summary(model)$r.squared))
+      },
+      "s8" = {
+        cat("ЗАДАЧА 8: Проверка распределения на нормальность (Критерий Шапиро-Уилка).\n\n")
+        x <- rnorm(40, mean = 0, sd = 1)
+        print(shapiro.test(x))
+        cat("Вывод: если p-value > 0.05, гипотеза о нормальности распределения НЕ отвергается.\n")
+      },
+      "s9" = {
+        cat("ЗАДАЧА 9: Расчет вероятностей и квантилей нормального распределения N(mean = 100, sd = 15).\n\n")
+        p_above <- pnorm(120, mean = 100, sd = 15, lower.tail = FALSE)
+        q_90 <- qnorm(0.90, mean = 100, sd = 15)
+        cat(sprintf("Вероятность получить значение больше 120: P(X > 120) = %.4f (%.2f%%)\n", p_above, p_above*100))
+        cat(sprintf("90-й перцентиль распределения (квантиль 0.90) = %.2f\n", q_90))
+      },
+      "s10" = {
+        cat("ЗАДАЧА 10: Схема Бернулли (Биномиальное распределение).\nИспытаний n = 10, вероятность успеха в одном испытании p = 0.3.\n\n")
+        probs <- dbinom(0:10, size = 10, prob = 0.3)
+        df <- data.frame(Успехов_k = 0:10, Вероятность = round(probs, 4))
+        print(df, row.names = FALSE)
+      }
+    )
+  })
+  
+  output$stat_plot <- renderPlot({
+    set.seed(input$stat_seed)
+    if (input$stat_task %in% c("s6", "s7")) {
+      x <- 1:30; y <- 12 + 3.2 * x + rnorm(30, 0, 12)
+      plot(x, y, pch = 19, col = "#8E44AD", main = "Диаграмма рассеяния и линия регрессии", xlab = "Предиктор X", ylab = "Отклик Y")
+      abline(lm(y ~ x), col = "#E74C3C", lwd = 3)
+      grid()
+    } else if (input$stat_task == "s10") {
+      barplot(dbinom(0:10, 10, 0.3), names.arg = 0:10, col = "#16A085", main = "Биномиальное распределение (n=10, p=0.3)", xlab = "Число успехов", ylab = "Вероятность")
+    } else {
+      x <- rnorm(100, mean = 100, sd = 15)
+      hist(x, probability = TRUE, col = "#AED6F1", border = "white", main = "Гистограмма выборки и плотность распределения", xlab = "Значение")
+      lines(density(x), col = "#1B4F72", lwd = 3)
+    }
+  })
+}
+
+shinyApp(ui = ui, server = server)
